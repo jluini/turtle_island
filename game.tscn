@@ -1,0 +1,46 @@
+[gd_scene load_steps=4 format=3 uid="uid://dj3n07k8wls3o"]
+
+[ext_resource type="PackedScene" uid="uid://c6ybk85lqfapt" path="res://map.tscn" id="1_80nbo"]
+[ext_resource type="Script" uid="uid://dnwr38youtbaj" path="res://game.gd" id="1_e2o6t"]
+[ext_resource type="PackedScene" uid="uid://bpbesqw6al42b" path="res://ball.tscn" id="3_feb5d"]
+
+[node name="game" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_e2o6t")
+map = ExtResource("1_80nbo")
+player = ExtResource("3_feb5d")
+
+[node name="background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.537011, 0.537011, 0.537011, 1)
+
+[node name="simulation" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="background" type="ColorRect" parent="simulation"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.299547, 0.299547, 0.299547, 1)
+
+[node name="map" parent="simulation" instance=ExtResource("1_80nbo")]

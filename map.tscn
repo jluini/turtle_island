@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3 uid="uid://c6ybk85lqfapt"]
+
+[ext_resource type="PackedScene" uid="uid://bommbd5q3gajb" path="res://rectangle.tscn" id="1_c7s6e"]
+[ext_resource type="PackedScene" uid="uid://bpbesqw6al42b" path="res://ball.tscn" id="1_wijl4"]
+
+[node name="map" type="Node2D"]
+
+[node name="ball" parent="." instance=ExtResource("1_wijl4")]
+position = Vector2(594, 106)
+
+[node name="ball2" parent="." instance=ExtResource("1_wijl4")]
+position = Vector2(597, 75)
+
+[node name="ball3" parent="." instance=ExtResource("1_wijl4")]
+position = Vector2(590, 38)
+
+[node name="rectangle" parent="." instance=ExtResource("1_c7s6e")]
+position = Vector2(725, 598)
+scale = Vector2(100, 3)
+
+[node name="rectangle2" parent="." instance=ExtResource("1_c7s6e")]
+position = Vector2(628, 285)
+scale = Vector2(3, 3)
+
+[node name="spawn0" type="Marker2D" parent="."]
+position = Vector2(253, 380)
+
+[node name="spawn1" type="Marker2D" parent="."]
+position = Vector2(905, 377)
