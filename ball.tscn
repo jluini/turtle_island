@@ -14,3 +14,5 @@ texture = ExtResource("1_x8fbi")
 
 [node name="shape" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_e0an3")
+
+[connection signal="sleeping_state_changed" from="." to="." method="_on_sleeping_state_changed"]

@@ -5,15 +5,6 @@
 
 [node name="map" type="Node2D"]
 
-[node name="ball" parent="." instance=ExtResource("1_wijl4")]
-position = Vector2(594, 106)
-
-[node name="ball2" parent="." instance=ExtResource("1_wijl4")]
-position = Vector2(597, 75)
-
-[node name="ball3" parent="." instance=ExtResource("1_wijl4")]
-position = Vector2(590, 38)
-
 [node name="rectangle" parent="." instance=ExtResource("1_c7s6e")]
 position = Vector2(725, 598)
 scale = Vector2(100, 3)
@@ -27,3 +18,14 @@ position = Vector2(253, 380)
 
 [node name="spawn1" type="Marker2D" parent="."]
 position = Vector2(905, 377)
+
+[node name="dynamic_objects" type="Node2D" parent="."]
+
+[node name="ball" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
+position = Vector2(594, 106)
+
+[node name="ball2" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
+position = Vector2(597, 75)
+
+[node name="ball3" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
+position = Vector2(590, 38)
