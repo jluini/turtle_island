@@ -1,5 +1,19 @@
 extends Control
 
+class_name Game
+
+signal network_state_changed(new_state)
+signal state_changed(new_state)
+signal turn_changed(new_turn)
+
+enum NetworkState {
+	NOTHING,
+	SERVER,
+	
+	CONNECTING,
+	CONNECTED
+}
+
 enum State {
 	NO_GAME,
 
@@ -19,7 +33,9 @@ var local_player = preload("res://local_player.gd")
 
 ###
 
-var state : State
+var state : State = State.NO_GAME
+var network_state : NetworkState = NetworkState.NOTHING
+
 var turn = 0
 var players = []
 var current_player = null
@@ -28,19 +44,34 @@ var current_player = null
 
 func _ready() -> void:
 	%timer.connect("timeout", _on_timer_timeout)
+	
 	set_state(State.NO_GAME)
+	set_turn(0)
+	set_network_state(NetworkState.NOTHING)
 
 func set_state(new_state):
-	print(State.find_key(state), " -> ", State.find_key(new_state))
-	
+	emit_signal("state_changed", new_state)
 	self.state = new_state
+
+func set_network_state(new_state):
+	emit_signal("network_state_changed", new_state)
+	self.network_state = new_state
 	
+func set_turn(new_turn):
+	emit_signal("turn_changed", new_turn)
+	self.turn = new_turn
+	
+
 func _input(event: InputEvent):
 	match state:
 		State.NO_GAME:
 			if event.is_action_pressed("ui_accept"):
 				set_state(State.STARTING)
 				_start_simulation()
+			
+			elif event.is_action_pressed("ui_page_down"):
+				pass
+				
 		State.PLAYING:
 			if event.is_action_pressed("ui_left"):
 				current_player.going_left()
@@ -63,8 +94,6 @@ func _on_timer_timeout():
 	
 			%timer.start()
 		State.WAITING:
-			turn = (turn % 2) + 1
-			current_player = players[turn - 1]
 			_continue_game()
 		
 
@@ -81,19 +110,18 @@ func _check_sleeping(source):
 			break
 
 	if not is_moving:
-		print("DONE ", source.name)
 		match state:
 			State.STARTING:
 				_start_game()
-	else:
-		print("---- ", source.name)
 
 func _start_game():
-	turn = 1
-	current_player = players[turn - 1]
+	turn = 2
 	_continue_game()
 
 func _continue_game():
+	set_turn((turn % 2) + 1)
+	current_player = players[turn - 1]
+	
 	if _game_goes_on():
 		set_state(State.PLAYING)
 		%timer.start()

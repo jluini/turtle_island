@@ -1,8 +1,11 @@
-[gd_scene load_steps=4 format=3 uid="uid://dj3n07k8wls3o"]
+[gd_scene load_steps=7 format=3 uid="uid://dj3n07k8wls3o"]
 
 [ext_resource type="PackedScene" uid="uid://c6ybk85lqfapt" path="res://map.tscn" id="1_80nbo"]
 [ext_resource type="Script" uid="uid://dnwr38youtbaj" path="res://game.gd" id="1_e2o6t"]
 [ext_resource type="PackedScene" uid="uid://bpbesqw6al42b" path="res://ball.tscn" id="3_feb5d"]
+[ext_resource type="Script" uid="uid://ctnh103fcyejw" path="res://state_label.gd" id="4_fc0e3"]
+[ext_resource type="Script" uid="uid://cqxdla77fohfe" path="res://network_state_label.gd" id="4_ryrav"]
+[ext_resource type="Script" uid="uid://dxab3w8oynra7" path="res://turn_label.gd" id="5_7jktm"]
 
 [node name="game" type="Control"]
 layout_mode = 3
@@ -24,6 +27,33 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.537011, 0.537011, 0.537011, 1)
 
+[node name="network_state_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 2.0
+offset_top = 7.0
+offset_right = 42.0
+offset_bottom = 30.0
+text = "coso"
+script = ExtResource("4_ryrav")
+
+[node name="state_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1.0
+offset_top = 38.0
+offset_right = 132.0
+offset_bottom = 73.0
+text = "La vida loca"
+script = ExtResource("4_fc0e3")
+
+[node name="turn_label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 1.0
+offset_top = 60.0
+offset_right = 41.0
+offset_bottom = 83.0
+text = "coso"
+script = ExtResource("5_7jktm")
+
 [node name="simulation" type="Node2D" parent="."]
 unique_name_in_owner = true
 
@@ -35,5 +65,10 @@ unique_name_in_owner = true
 
 [node name="timer" type="Timer" parent="."]
 unique_name_in_owner = true
+editor_description = "El tiempo loco"
 wait_time = 2.0
 one_shot = true
+
+[connection signal="network_state_changed" from="." to="network_state_label" method="_on_game_network_state_changed"]
+[connection signal="state_changed" from="." to="state_label" method="_on_game_state_changed"]
+[connection signal="turn_changed" from="." to="turn_label" method="_on_game_turn_changed"]

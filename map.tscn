@@ -22,9 +22,7 @@ position = Vector2(905, 377)
 [node name="dynamic_objects" type="Node2D" parent="."]
 
 [node name="ball" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
-position = Vector2(594, 106)
-sleeping = true
-freeze = true
+position = Vector2(633, 192)
 
 [node name="ball2" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
 position = Vector2(597, 75)
