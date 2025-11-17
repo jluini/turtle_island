@@ -6,8 +6,8 @@
 [node name="map" type="Node2D"]
 
 [node name="rectangle" parent="." instance=ExtResource("1_c7s6e")]
-position = Vector2(725, 598)
-scale = Vector2(100, 3)
+position = Vector2(599, 500)
+scale = Vector2(42.205, 3)
 
 [node name="rectangle2" parent="." instance=ExtResource("1_c7s6e")]
 position = Vector2(628, 285)
@@ -23,9 +23,15 @@ position = Vector2(905, 377)
 
 [node name="ball" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
 position = Vector2(594, 106)
+sleeping = true
+freeze = true
 
 [node name="ball2" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
 position = Vector2(597, 75)
+sleeping = true
+freeze = true
 
 [node name="ball3" parent="dynamic_objects" instance=ExtResource("1_wijl4")]
 position = Vector2(590, 38)
+sleeping = true
+freeze = true
