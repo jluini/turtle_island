@@ -2,7 +2,8 @@ extends Node
 
 class_name Player
 
-@export var units = []
+@export var peer_id : int = 0
+@export var units : Array = []
 
 func standing_still():
 	set_dir(0)

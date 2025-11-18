@@ -1,7 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://bpbesqw6al42b"]
+[gd_scene load_steps=5 format=3 uid="uid://v0iafjy42wmv"]
 
-[ext_resource type="Script" uid="uid://de655rkyqg44e" path="res://ball.gd" id="1_41u45"]
-[ext_resource type="Texture2D" uid="uid://dcpb1iqjiw803" path="res://icon.svg" id="1_x8fbi"]
+[ext_resource type="Script" uid="uid://dqsuj0oh6w6u3" path="res://turtle.gd" id="1_2ssyi"]
+[ext_resource type="Texture2D" uid="uid://dcpb1iqjiw803" path="res://icon.svg" id="2_w1etq"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_e0an3"]
 
@@ -9,13 +9,17 @@
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
 properties/0/replication_mode = 1
+properties/1/path = NodePath(".:peer_id")
+properties/1/spawn = true
+properties/1/replication_mode = 2
 
-[node name="ball" type="RigidBody2D"]
-script = ExtResource("1_41u45")
+[node name="turtle" type="RigidBody2D"]
+script = ExtResource("1_2ssyi")
 
 [node name="sprite" type="Sprite2D" parent="."]
+modulate = Color(1, 0.196078, 1, 1)
 scale = Vector2(0.16, 0.16)
-texture = ExtResource("1_x8fbi")
+texture = ExtResource("2_w1etq")
 
 [node name="shape" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_e0an3")
