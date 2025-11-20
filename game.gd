@@ -25,7 +25,7 @@ enum State {
 	PLAYING,
 	PLAYING_REMOTELLY,
 	CELEBRATING,
-	
+
 	CONNECTING,
 	CONNECTED
 }
@@ -56,13 +56,13 @@ var current_player = null
 
 func _ready() -> void:
 	%timer.connect("timeout", _on_timer_timeout)
-	
+
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	
+
 	set_state(State.INITIAL)
 	set_turn(0)
 
@@ -73,7 +73,7 @@ func set_state(new_state : State):
 #func set_network_state(new_state):
 	#emit_signal("network_state_changed", new_state)
 	#self.network_state = new_state
-	
+
 func set_turn(new_turn : int):
 	emit_signal("turn_changed", new_turn)
 	self.turn = new_turn
@@ -83,34 +83,34 @@ func _input(event: InputEvent):
 		State.INITIAL:
 			if event.is_action_pressed("ui_accept"):
 				pass # _start_simulation(false, [1, 1])
-	
+				start_online_game([1, 1])
+
 			elif event.is_action_pressed("ui_page_down"):
 				_start_server()
 			elif event.is_action_pressed("ui_page_up"):
 				_start_client()
 
 		State.PLAYING:
-			pass # TODO
-			#if event.is_action_pressed("ui_left"):
-				#current_player.going_left()
-			#elif event.is_action_pressed("ui_right"):
-				#current_player.going_right()
-			#elif event.is_action_released("ui_left"):
-				#current_player.standing_still()
-			#elif event.is_action_released("ui_right"):
-				#current_player.standing_still()
-			
+			if event.is_action_pressed("ui_left"):
+				current_player.going_left()
+			elif event.is_action_pressed("ui_right"):
+				current_player.going_right()
+			elif event.is_action_released("ui_left"):
+				current_player.standing_still()
+			elif event.is_action_released("ui_right"):
+				current_player.standing_still()
+
 
 ###
 
 func _start_server():
 	var peer = ENetMultiplayerPeer.new()
 	var error = peer.create_server(PORT, 1)
-	
+
 	print("create_server -> ", error)
 	if error:
 		return error
-		
+
 	multiplayer.multiplayer_peer = peer
 	set_state(State.HOSTING)
 
@@ -118,32 +118,34 @@ func _start_server():
 func _start_simulation():
 	for child in %simulation.get_node("map").get_children():
 		child.free()
-		
+
 	for child in %simulation.get_node("units").get_children():
 		child.free()
-	
+
 	var scenario = map.instantiate()
-		
+
 	for do in scenario.get_node("dynamic_objects").get_children():
 		do.connect("sleeping_state_changed", self._check_sleeping.bind(do))
-	
+
 	%simulation.get_node("map").add_child(scenario)
 
 	# TODO: delete old players
-	
+
 	for i in range(peers.size()):
+		var player_id = i + 1
 		var peer_id = peers[i]
 		var new_player = local_player.new()
 		var spawn_point_name = ["spawn0", "spawn1"][i]
 		var turtle_name = ["turtle1", "turtle2"][i]
-		
-		var new_turtle = add_a_turtle(scenario.get_node(spawn_point_name).position, turtle_name, peer_id)
-		
+
+		var new_turtle = add_a_turtle(scenario.get_node(spawn_point_name).position, turtle_name, player_id, peer_id)
+
+		new_player.player_id = player_id
 		new_player.peer_id = peer_id
 		new_player.units.append(new_turtle)
-	
+
 		players.append(new_player)
-	
+
 ###
 # Signal handlers
 
@@ -154,6 +156,7 @@ func _on_timer_timeout():
 		State.PLAYING:
 			if multiplayer.is_server():
 				print("Termino un turno server")
+				current_player.standing_still()
 				if anything_is_moving():
 					set_state(State.SETTLING)
 				else:
@@ -161,8 +164,12 @@ func _on_timer_timeout():
 					%timer.start()
 			else:
 				print("Termino un turno cliente")
-				pass # TODO
-			
+				current_player.standing_still()
+				if anything_is_moving():
+					set_state(State.SETTLING)
+				else:
+					print("GO TO BACK TO SERVER 1")
+
 			## TODO
 			#current_player.standing_still()
 			#set_state(State.SETTLING)
@@ -170,17 +177,17 @@ func _on_timer_timeout():
 			#%timer.start()
 		#State.SETTLING:
 			#_continue_game()
-		
+
 
 func _check_sleeping(source):
 	if state != State.SETTLING:
 		return
-	
+
 	var is_moving = anything_is_moving()
-	
+
 	if is_moving:
 		return
-	
+
 	if multiplayer.is_server():
 		# print("%s: should continue game here" % [multiplayer.get_unique_id()])
 		#pass
@@ -189,29 +196,54 @@ func _check_sleeping(source):
 		%timer.start()
 	else:
 		pass # TODO
-	
+		print("GO TO BACK TO SERVER 2")
+
 	#if not is_moving:
 		#match state:
 			#State.STARTING:
 				#_start_game()
 
-	
+
 func anything_is_moving():
 	for do in %simulation.get_node("map/map/dynamic_objects").get_children():
 		if !do.sleeping:
+			print("%s: is moving %s" % [multiplayer.get_unique_id(), do.name])
 			return true
-	
+
 	for do in %simulation.get_node("units").get_children():
 		if !do.sleeping:
+			print("%s: is moving %s" % [multiplayer.get_unique_id(), do.name])
 			return true
 
 	return false
-	
+
+func freeze_all(new_authority):
+	for do in %simulation.get_node("map/map/dynamic_objects").get_children():
+		do.freeze = true
+		do.sleeping = true
+		do.set_multiplayer_authority(new_authority)
+
+	for do in %simulation.get_node("units").get_children():
+		do.freeze = true
+		do.sleeping = true
+		do.set_multiplayer_authority(new_authority)
+
+	return false
+
+func unfreeze_all():
+	for do in %simulation.get_node("map/map/dynamic_objects").get_children():
+		do.freeze = false
+		do.set_multiplayer_authority(multiplayer.get_unique_id())
+
+	for do in %simulation.get_node("units").get_children():
+		do.freeze = false
+		do.set_multiplayer_authority(multiplayer.get_unique_id())
+
 func _continue_game():
 	set_turn((turn % 2) + 1)
 	var current_peer = peers[turn - 1]
 	current_player = players[turn - 1]
-	
+
 	if _game_goes_on():
 		if current_peer == 1:
 			print("le toca al server")
@@ -219,23 +251,29 @@ func _continue_game():
 			%timer.start()
 		else:
 			print("le toca al cliente")
+			te_toca.rpc_id(peers[turn - 1], turn)
+			set_state(State.PLAYING_REMOTELLY)
+
+			freeze_all(peers[turn - 1])
+
 	else:
 		pass # TODO
 
 func _game_goes_on():
 	return true # TODO
 
-func add_a_turtle(position, name, peer_id):
+func add_a_turtle(position, name, player_id, peer_id):
 	var new_turtle : RigidBody2D = player.instantiate()
 	new_turtle.connect("sleeping_state_changed", self._check_sleeping.bind(new_turtle))
 	%simulation.get_node("units").add_child(new_turtle)
 
 	new_turtle.position = position
-	new_turtle.name = name
-	
+	new_turtle.set_attrs(name, player_id, peer_id)
+
 	if !multiplayer.is_server():
 		new_turtle.freeze = true
-	
+		new_turtle.sleeping = true
+
 	return new_turtle
 
 ###
@@ -243,12 +281,12 @@ func add_a_turtle(position, name, peer_id):
 func _start_client():
 	var peer = ENetMultiplayerPeer.new()
 	var error = peer.create_client(DEFAULT_SERVER_IP, PORT)
-	
+
 	print("create_client -> ", error)
 
 	if error:
 		return error
-	
+
 	multiplayer.multiplayer_peer = peer
 	set_state(State.CONNECTING)
 #
@@ -256,10 +294,10 @@ func _start_client():
 @rpc("authority", "call_local", "reliable", 0)
 func start_online_game(peers):
 	print("STARTING ONLINE %s %s %s" % [multiplayer.is_server(), multiplayer.get_unique_id(), peers])
-	
+
 	self.peers = peers
 	_start_simulation()
-	
+
 	if multiplayer.is_server():
 		# set_state(State.STARTING)
 		turn = 2
@@ -267,18 +305,29 @@ func start_online_game(peers):
 	else:
 		set_state(State.PLAYING_REMOTELLY)
 
+@rpc("authority", "call_local", "reliable", 0)
+func te_toca(turn: int):
+	# print("%s: me toca" % [multiplayer.get_unique_id()])
+	current_player = players[turn - 1]
+	set_state(State.PLAYING)
+	%timer.start()
+
+	unfreeze_all()
+
+
+
 func _on_peer_connected(id):
 	print("%s: peer_connected %s" % [multiplayer.get_unique_id(), id])
-	
+
 	if multiplayer.is_server():
 		start_online_game.rpc([1, id])
 	else:
 		set_state(State.CONNECTED)
-	
+
 	#if multiplayer.is_server():
 		#_start_simulation(true, [1, id])
 
-	
+
 func _on_peer_disconnected(id):
 	print("%s: peer_disconnected %s" % [multiplayer.get_unique_id(), id])
 func _on_connected_to_server():
@@ -287,4 +336,4 @@ func _on_connection_failed():
 	print("%s: connection_failed" % [multiplayer.get_unique_id()])
 func _on_server_disconnected():
 	print("%s: server_disconnected" % [multiplayer.get_unique_id()])
-	
+

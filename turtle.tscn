@@ -9,9 +9,6 @@
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
 properties/0/replication_mode = 1
-properties/1/path = NodePath(".:peer_id")
-properties/1/spawn = true
-properties/1/replication_mode = 2
 
 [node name="turtle" type="RigidBody2D"]
 script = ExtResource("1_2ssyi")
@@ -26,5 +23,12 @@ shape = SubResource("CircleShape2D_e0an3")
 
 [node name="multiplayer_synchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("SceneReplicationConfig_41u45")
+
+[node name="label" type="Label" parent="."]
+offset_left = -5.0
+offset_top = -12.0
+offset_right = 35.0
+offset_bottom = 11.0
+text = "1"
 
 [connection signal="sleeping_state_changed" from="." to="." method="_on_sleeping_state_changed"]
