@@ -2,7 +2,7 @@ extends RigidBody2D
 
 @export var dir = 0
 
-func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
+func _integrate_forces(_state: PhysicsDirectBodyState2D) -> void:
 	# print(dir)
 	if dir > 0:
 		

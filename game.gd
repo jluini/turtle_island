@@ -2,17 +2,8 @@ extends Control
 
 class_name Game
 
-#signal network_state_changed(new_state)
 signal state_changed(new_state)
 signal turn_changed(new_turn)
-
-#enum NetworkState {
-	#NOTHING,
-	#SERVER,
-	#
-	#CONNECTING,
-	#CONNECTED
-#}
 
 enum State {
 	NOTHING,
@@ -50,7 +41,6 @@ var state : State = State.NOTHING
 var turn = 0
 var peers = []
 var players = []
-var current_player = null
 
 ###
 
@@ -70,10 +60,7 @@ func set_state(new_state : State):
 	emit_signal("state_changed", new_state)
 	self.state = new_state
 
-#func set_network_state(new_state):
-	#emit_signal("network_state_changed", new_state)
-	#self.network_state = new_state
-
+@rpc("authority", "call_local", "reliable", 0)
 func set_turn(new_turn : int):
 	emit_signal("turn_changed", new_turn)
 	self.turn = new_turn
@@ -82,7 +69,6 @@ func _input(event: InputEvent):
 	match state:
 		State.INITIAL:
 			if event.is_action_pressed("ui_accept"):
-				pass # _start_simulation(false, [1, 1])
 				start_online_game([1, 1])
 
 			elif event.is_action_pressed("ui_page_down"):
@@ -92,14 +78,13 @@ func _input(event: InputEvent):
 
 		State.PLAYING:
 			if event.is_action_pressed("ui_left"):
-				current_player.going_left()
+				players[turn - 1].going_left()
 			elif event.is_action_pressed("ui_right"):
-				current_player.going_right()
+				players[turn - 1].going_right()
 			elif event.is_action_released("ui_left"):
-				current_player.standing_still()
+				players[turn - 1].standing_still()
 			elif event.is_action_released("ui_right"):
-				current_player.standing_still()
-
+				players[turn - 1].standing_still()
 
 ###
 
@@ -114,7 +99,6 @@ func _start_server():
 	multiplayer.multiplayer_peer = peer
 	set_state(State.HOSTING)
 
-# func _start_simulation(is_multiplayer: bool, peers: Array):
 func _start_simulation():
 	for child in %simulation.get_node("map").get_children():
 		child.free()
@@ -149,37 +133,29 @@ func _start_simulation():
 ###
 # Signal handlers
 
+@rpc("any_peer", "call_local", "reliable", 0)
+func wait_and_continue():
+	set_state(State.WAITING)
+	%timer.start()
+
 func _on_timer_timeout():
 	match state:
 		State.WAITING:
 			_continue_game()
 		State.PLAYING:
-			if multiplayer.is_server():
-				print("Termino un turno server")
-				current_player.standing_still()
-				if anything_is_moving():
-					set_state(State.SETTLING)
-				else:
-					set_state(State.WAITING)
-					%timer.start()
+			players[turn - 1].standing_still()
+			if anything_is_moving():
+				set_state(State.SETTLING)
 			else:
-				print("Termino un turno cliente")
-				current_player.standing_still()
-				if anything_is_moving():
-					set_state(State.SETTLING)
-				else:
-					print("GO TO BACK TO SERVER 1")
+				turn_is_over()
 
-			## TODO
-			#current_player.standing_still()
-			#set_state(State.SETTLING)
-	#
-			#%timer.start()
-		#State.SETTLING:
-			#_continue_game()
+func turn_is_over():
+	freeze_all(1)
+	if not multiplayer.is_server():
+		set_state(State.PLAYING_REMOTELLY)
+	wait_and_continue.rpc_id(1)
 
-
-func _check_sleeping(source):
+func _check_sleeping(_source):
 	if state != State.SETTLING:
 		return
 
@@ -188,21 +164,12 @@ func _check_sleeping(source):
 	if is_moving:
 		return
 
-	if multiplayer.is_server():
-		# print("%s: should continue game here" % [multiplayer.get_unique_id()])
-		#pass
-		#_continue_game()
-		set_state(State.WAITING)
-		%timer.start()
-	else:
-		pass # TODO
-		print("GO TO BACK TO SERVER 2")
+	turn_is_over()
 
-	#if not is_moving:
-		#match state:
-			#State.STARTING:
-				#_start_game()
-
+@rpc("any_peer", "call_remote", "reliable", 0)
+func back_to_server(from):
+	print("%s: back_to_server called by %s" % [multiplayer.get_unique_id(), from])
+	_continue_game()
 
 func anything_is_moving():
 	for do in %simulation.get_node("map/map/dynamic_objects").get_children():
@@ -217,62 +184,70 @@ func anything_is_moving():
 
 	return false
 
+func freeze_this(do, new_authority):
+	do.freeze = true
+	# do.sleeping = val
+	do.set_multiplayer_authority(new_authority)
+	do.get_node("label").text = str(new_authority)
+	
+	
 func freeze_all(new_authority):
 	for do in %simulation.get_node("map/map/dynamic_objects").get_children():
-		do.freeze = true
-		do.sleeping = true
-		do.set_multiplayer_authority(new_authority)
+		call_deferred("freeze_this", do, new_authority)
+		# do.call_deferred("set_multiplayer_authority", new_authority)
+		# do.set_multiplayer_authority(new_authority)
 
 	for do in %simulation.get_node("units").get_children():
-		do.freeze = true
-		do.sleeping = true
-		do.set_multiplayer_authority(new_authority)
-
-	return false
-
+		call_deferred("freeze_this", do, new_authority)
+		
 func unfreeze_all():
 	for do in %simulation.get_node("map/map/dynamic_objects").get_children():
-		do.freeze = false
-		do.set_multiplayer_authority(multiplayer.get_unique_id())
+		call_deferred("unfreeze_this", do)
+		#call_deferred("freeze_this", do, false)
+		#call_deferred("authorize", do, multiplayer.get_unique_id())
+		#do.call_deferred("set_multiplayer_authority", multiplayer.get_unique_id())
+		# do.set_multiplayer_authority(multiplayer.get_unique_id())
+		# do.get_node("label").text = "X"
 
 	for do in %simulation.get_node("units").get_children():
+		call_deferred("unfreeze_this", do)
+		
+func unfreeze_this(do):
+		# do.global_position = do.position
 		do.freeze = false
 		do.set_multiplayer_authority(multiplayer.get_unique_id())
+		do.get_node("label").text = "X"
 
+# only in server
 func _continue_game():
-	set_turn((turn % 2) + 1)
-	var current_peer = peers[turn - 1]
-	current_player = players[turn - 1]
-
-	if _game_goes_on():
-		if current_peer == 1:
-			print("le toca al server")
-			set_state(State.PLAYING)
-			%timer.start()
-		else:
-			print("le toca al cliente")
-			te_toca.rpc_id(peers[turn - 1], turn)
-			set_state(State.PLAYING_REMOTELLY)
-
-			freeze_all(peers[turn - 1])
-
+	if multiplayer.get_unique_id() != 1:
+		print("_continue_game should be called in server only")
+		return
+		
+	if !_game_goes_on():
+		# TODO
+		pass
 	else:
-		pass # TODO
-
+		set_turn.rpc((turn % 2) + 1)
+		te_toca.rpc_id(peers[turn - 1])
+		
+		if peers[turn - 1] != 1:
+			set_state(State.PLAYING_REMOTELLY)
+			freeze_all(peers[turn - 1])
+		
 func _game_goes_on():
 	return true # TODO
 
-func add_a_turtle(position, name, player_id, peer_id):
+func add_a_turtle(new_position, new_name, player_id, peer_id):
 	var new_turtle : RigidBody2D = player.instantiate()
 	new_turtle.connect("sleeping_state_changed", self._check_sleeping.bind(new_turtle))
 	%simulation.get_node("units").add_child(new_turtle)
 
-	new_turtle.position = position
-	new_turtle.set_attrs(name, player_id, peer_id)
+	new_turtle.position = new_position
+	new_turtle.set_attrs(new_name, player_id, peer_id)
 
 	if !multiplayer.is_server():
-		new_turtle.freeze = true
-		new_turtle.sleeping = true
+		freeze_this(new_turtle, true)
 
 	return new_turtle
 
@@ -292,29 +267,23 @@ func _start_client():
 #
 
 @rpc("authority", "call_local", "reliable", 0)
-func start_online_game(peers):
+func start_online_game(the_peers):
 	print("STARTING ONLINE %s %s %s" % [multiplayer.is_server(), multiplayer.get_unique_id(), peers])
 
-	self.peers = peers
+	self.peers = the_peers
 	_start_simulation()
 
 	if multiplayer.is_server():
-		# set_state(State.STARTING)
 		turn = 2
 		set_state(State.SETTLING)
 	else:
 		set_state(State.PLAYING_REMOTELLY)
 
 @rpc("authority", "call_local", "reliable", 0)
-func te_toca(turn: int):
-	# print("%s: me toca" % [multiplayer.get_unique_id()])
-	current_player = players[turn - 1]
+func te_toca():
 	set_state(State.PLAYING)
 	%timer.start()
-
 	unfreeze_all()
-
-
 
 func _on_peer_connected(id):
 	print("%s: peer_connected %s" % [multiplayer.get_unique_id(), id])
@@ -324,10 +293,6 @@ func _on_peer_connected(id):
 	else:
 		set_state(State.CONNECTED)
 
-	#if multiplayer.is_server():
-		#_start_simulation(true, [1, id])
-
-
 func _on_peer_disconnected(id):
 	print("%s: peer_disconnected %s" % [multiplayer.get_unique_id(), id])
 func _on_connected_to_server():
@@ -335,5 +300,4 @@ func _on_connected_to_server():
 func _on_connection_failed():
 	print("%s: connection_failed" % [multiplayer.get_unique_id()])
 func _on_server_disconnected():
-	print("%s: server_disconnected" % [multiplayer.get_unique_id()])
-
+	print("server_disconnected")
